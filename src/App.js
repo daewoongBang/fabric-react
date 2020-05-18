@@ -1,7 +1,8 @@
 import React from 'react';
+import Fabric from './Fabric';
 
 function App() {
-  return <div>Hello!!!</div>;
+  return <Fabric />;
 }
 
 export default App;
