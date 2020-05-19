@@ -4,38 +4,37 @@ import { fabric } from 'fabric';
 const Polygon = () => {
   const canvasEl = useRef();
   const [canvas, setCanvas] = useState();
+  const [lines, setLines] = useState([]);
+  const [lineCount, setLineCount] = useState(0);
+  const [polygonPoints, setpolygonPoints] = useState([]);
   const [drawingObject, setDrawingObject] = useState({
     type: '',
     background: '',
     border: ''
   });
-  const [startingPoint, setStartingPoint] = useState({ x: 0, y: 0 });
-  const [polygonPoints, setpolygonPoints] = useState([]);
-  const [lines, setLines] = useState([]);
-  const [lineCount, setLineCount] = useState(0);
 
-  const handleDrawPolygonClick = () => {
+  const handleDrawPolygonButtonClick = () => {
     if (drawingObject.type === 'polygon') {
       setDrawingObject({ ...drawingObject, type: '' });
-      // 후처리
     } else {
       setDrawingObject({ ...drawingObject, type: 'polygon' });
     }
   };
 
+  const handleEditPolygonButtonClick = () => {
+    window.console.log('Edit');
+  };
+
   const handleMouseUp = useCallback(
     options => {
       if (drawingObject.type === 'polygon') {
-        window.console.log(options);
-        setStartingPoint({ x: options.pointer.x, y: options.pointer.y });
-        // setStartingPoint(options);
-        window.console.log('canvas', canvas);
         const x = options.pointer.x;
         const y = options.pointer.y;
+
         setpolygonPoints(
           polygonPoints.concat({
-            x: options.pointer.x,
-            y: options.pointer.y
+            x: x,
+            y: y
           })
         );
 
@@ -43,25 +42,21 @@ const Polygon = () => {
         const line = new fabric.Line(points, {
           strokeWidth: 2,
           selectable: false,
-          stroke: 'black'
+          stroke: 'rgba(0, 255, 0, 0.5)'
         });
+
         setLines(lines.concat(line));
         setLineCount(lineCount + 1);
         canvas.add(line);
       }
     },
     // eslint-disable-next-line
-    [canvas, drawingObject, startingPoint, polygonPoints, lines, lineCount]
+    [canvas, drawingObject, polygonPoints, lines, lineCount]
   );
 
   const handleMouseMove = useCallback(
     options => {
-      if (
-        lines[0] !== null &&
-        lines[0] !== undefined &&
-        drawingObject.type === 'polygon'
-      ) {
-        setStartingPoint({ x: options.pointer.x, y: options.pointer.y });
+      if (lines[0] && drawingObject.type === 'polygon') {
         lines[lineCount - 1].set({
           x2: options.pointer.x,
           y2: options.pointer.y
@@ -70,12 +65,10 @@ const Polygon = () => {
       }
     },
     // eslint-disable-next-line
-    [canvas, drawingObject, lines, startingPoint, lineCount]
+    [canvas, drawingObject, lines, lineCount]
   );
 
   const handleMouseDoubleClick = useCallback(() => {
-    window.console.log('double click!!');
-
     if (drawingObject.type === 'polygon') {
       setDrawingObject({ ...drawingObject, type: '' });
 
@@ -87,7 +80,7 @@ const Polygon = () => {
       canvas.add(polygon);
       canvas.renderAll();
 
-      //clear arrays
+      //clear
       setpolygonPoints([]);
       setLines([]);
       setLineCount(0);
@@ -99,10 +92,10 @@ const Polygon = () => {
   const makePolygon = useCallback(
     points => {
       const polygon = new fabric.Polygon(points, {
-        left: findLeftPaddingForPolygon(polygonPoints),
-        top: findTopPaddingForPolygon(polygonPoints),
-        fill: 'rgba(0,255,0,0.1)',
-        stroke: 'black',
+        left: getLeftPosition(polygonPoints),
+        top: getTopPosition(polygonPoints),
+        fill: 'rgba(0, 255, 0, 0.1)',
+        stroke: 'rgba(0, 255, 0, 0.5)',
         strokeWidth: 2
       });
 
@@ -112,40 +105,52 @@ const Polygon = () => {
     [canvas, polygonPoints]
   );
 
-  const findTopPaddingForPolygon = useCallback(
+  const getTopPosition = useCallback(
     points => {
-      let result = 999999;
-      for (var f = 0; f < lineCount; f++) {
+      let result = canvas.height;
+      for (let f = 0; f < lineCount; f++) {
         if (points[f].y < result) {
           result = points[f].y;
         }
       }
       return Math.abs(result);
     },
-    [lineCount]
+    [canvas, lineCount]
   );
 
-  const findLeftPaddingForPolygon = useCallback(
+  const getLeftPosition = useCallback(
     points => {
-      let result = 999999;
-      for (var i = 0; i < lineCount; i++) {
+      let result = canvas.width;
+      for (let i = 0; i < lineCount; i++) {
         if (points[i].x < result) {
           result = points[i].x;
         }
       }
       return Math.abs(result);
     },
-    [lineCount]
+    [canvas, lineCount]
   );
 
-  useEffect(() => {
-    window.console.log(polygonPoints);
-  }, [polygonPoints]);
+  //   const getRandomRGB = opacity => {
+  //     const o = Math.round,
+  //       r = Math.random,
+  //       s = 255;
+
+  //     return (
+  //       'rgba(' +
+  //       o(r() * s) +
+  //       ',' +
+  //       o(r() * s) +
+  //       ',' +
+  //       o(r() * s) +
+  //       ',' +
+  //       opacity +
+  //       ')'
+  //     );
+  //   };
 
   useEffect(() => {
     if (canvas) {
-      //   canvas.off('mouse:up');
-
       canvas.off('mouse:up');
       canvas.off('mouse:move');
       canvas.off('mouse:dblclick');
@@ -156,7 +161,7 @@ const Polygon = () => {
     }
 
     // eslint-disable-next-line
-  }, [canvas, drawingObject, polygonPoints, startingPoint, lines, lineCount]);
+  }, [canvas, drawingObject, polygonPoints, lines, lineCount]);
 
   useEffect(() => {
     if (canvas) {
@@ -178,7 +183,18 @@ const Polygon = () => {
   return (
     <div>
       <div>
-        <button onClick={handleDrawPolygonClick}>Draw Polygon</button>
+        <button
+          onClick={handleDrawPolygonButtonClick}
+          disabled={drawingObject.type !== ''}
+        >
+          Draw Polygon
+        </button>
+        <button
+          onClick={handleEditPolygonButtonClick}
+          disabled={drawingObject.type !== ''}
+        >
+          Edit Polygon
+        </button>
 
         <canvas
           ref={canvasEl}
