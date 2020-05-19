@@ -1,8 +1,8 @@
 import React from 'react';
-import Fabric from './Fabric';
+import Polygon from './Polygon';
 
 function App() {
-  return <Fabric />;
+  return <Polygon />;
 }
 
 export default App;
