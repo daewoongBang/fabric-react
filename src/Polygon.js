@@ -5,6 +5,8 @@ const Polygon = () => {
   const canvasEl = useRef();
   const [canvas, setCanvas] = useState();
   const [lines, setLines] = useState([]);
+  const [circles, setCircles] = useState([]);
+  const [editPolygon, setEditPolygon] = useState(null);
   const [lineCount, setLineCount] = useState(0);
   const [polygonPoints, setpolygonPoints] = useState([]);
   const [drawingObject, setDrawingObject] = useState({
@@ -21,9 +23,19 @@ const Polygon = () => {
     }
   };
 
-  const handleEditPolygonButtonClick = () => {
-    window.console.log('Edit');
+  const handleEditPolygonButtonClick = useCallback(() => {
     const activePolygon = canvas.getActiveObject();
+    window.console.log('Edit', activePolygon);
+    // const indexPolygon = canvas.getObjects().indexOf(activePolygon);
+
+    if (editPolygon) {
+      editPolygon.cornerStyle = 'rect';
+      editPolygon.controls = fabric.Object.prototype.controls;
+      circles.forEach(value => {
+        canvas.remove(value);
+      });
+      editPolygon.hasBorders = !editPolygon.edit;
+    }
 
     if (activePolygon) {
       canvas.setActiveObject(activePolygon);
@@ -32,6 +44,12 @@ const Polygon = () => {
       if (activePolygon.edit) {
         const lastControl = activePolygon.points.length - 1;
         activePolygon.cornerStyle = 'circle';
+        activePolygon.hasControls = false;
+
+        // 3.6.3 version
+        makeCircles(activePolygon.points);
+        setEditPolygon(activePolygon);
+        // 4.0.0 version
         // activePolygon.controls = activePolygon.points.reduce(
         //   (acc, point, index) => {
         //     acc['p' + index] = new fabric({
@@ -50,13 +68,25 @@ const Polygon = () => {
       } else {
         activePolygon.cornerStyle = 'rect';
         activePolygon.controls = fabric.Object.prototype.controls;
+
+        circles.forEach(value => {
+          canvas.remove(value);
+        });
+        setCircles([]);
+        setEditPolygon(null);
       }
       activePolygon.hasBorders = !activePolygon.edit;
       canvas.requestRenderAll();
 
       window.console.log(activePolygon);
     }
-  };
+
+    // eslint-disable-next-line
+  }, [canvas, circles, editPolygon]);
+
+  const handleClearButtonClick = useCallback(() => {
+    canvas.clear();
+  }, [canvas]);
 
   const polygonPositionHandler = (dim, finalMatrix, fabricObject) => {
     const x =
@@ -163,6 +193,7 @@ const Polygon = () => {
         canvas.remove(value);
       });
 
+      polygonPoints.splice(polygonPoints.length - 1);
       const polygon = makePolygon(polygonPoints);
       canvas.add(polygon);
       canvas.renderAll();
@@ -173,8 +204,99 @@ const Polygon = () => {
       setLineCount(0);
     }
 
+    const activePolygon = canvas.getActiveObject();
+    if (activePolygon) {
+      window.console.log('dbclick', activePolygon);
+    }
+
     // eslint-disable-next-line
   }, [canvas, drawingObject, lines, polygonPoints]);
+
+  const handleObjectMoving = useCallback(
+    options => {
+      window.console.log('moving');
+      if (editPolygon) {
+        const objectType = options.target.get('type');
+        const p = options.target;
+        if (objectType === 'circle') {
+          window.console.log('objectType', objectType);
+          window.console.log('p', p);
+
+          editPolygon.points[p.name] = {
+            x: p.getCenterPoint().x,
+            y: p.getCenterPoint().y
+          };
+          editPolygon.initialize(editPolygon.points);
+        }
+        window.console.log(editPolygon.points);
+
+        //   window.console.log('수정 중 이동!');
+        //   circles.forEach(value => {
+        //     canvas.remove(value);
+        //   });
+        //   //   window.console.log(getActivePolygonPoints());
+        //   makeCircles(getActivePolygonPoints());
+        //   canvas.requestRenderAll();
+      }
+      // eslint-disable-next-line
+    },
+    // eslint-disable-next-line
+    [canvas, editPolygon]
+  );
+
+  const handleObjectMoved = useCallback(
+    options => {
+      const activePolygon = canvas.getActiveObject();
+      //   window.console.log('수정된 activePolygon', activePolygon);
+      //   activePolygon.set({ points: points });
+      //   window.console.log('수정된 activePolygon', activePolygon);
+      //   const aa = makePolygon(points);
+      //   canvas.add(aa);
+      //   canvas.renderAll();
+      if (options.target.get('type') === 'polygon') {
+        activePolygon.initialize(getActivePolygonPoints());
+        if (editPolygon) {
+          circles.forEach(value => {
+            canvas.remove(value);
+          });
+          makeCircles(getActivePolygonPoints());
+          canvas.requestRenderAll();
+        }
+      }
+
+      //   window.console.log(circles);
+
+      window.console.log('activePolygon', activePolygon);
+      // activePolygon.points = points;
+
+      // points.forEach((point, index) => {
+      //   //   window.console.log('point', point);
+      //   const circle = new fabric.Circle({
+      //     radius: 5,
+      //     fill: 'green',
+      //     left: point.x,
+      //     top: point.y,
+      //     originX: 'center',
+      //     originY: 'center',
+      //     hasBorders: false,
+      //     hasControls: false
+      //     //   name: `${indexPolygon}-${index}`
+      //   });
+      //   // tempCircles = tempCircles.concat(circle);
+      //   //   canvas.add(circle);
+      // });
+
+      // // const polygon = makePolygon(points);
+      // // canvas.add(polygon);
+      // // // canvas.remove(activePolygon);
+      // // canvas.renderAll();
+
+      //   window.console.log('e', e.target);
+      //   window.console.log('points', points);
+    },
+    // eslint-disable-next-line
+    [canvas, circles]
+  );
 
   const makePolygon = useCallback(
     points => {
@@ -182,9 +304,9 @@ const Polygon = () => {
         left: getLeftPosition(polygonPoints),
         top: getTopPosition(polygonPoints),
         fill: 'rgba(0, 255, 0, 0.1)',
-        stroke: 'rgba(0, 255, 0, 0.5)',
-        strokeWidth: 2,
-        hasBorders: false,
+        // stroke: 'rgba(0, 255, 0, 0.5)',
+        // strokeWidth: 2,
+        // hasBorders: false,
         hasControls: false
         // evented: false
       });
@@ -194,6 +316,51 @@ const Polygon = () => {
     // eslint-disable-next-line
     [canvas, polygonPoints]
   );
+
+  const makeCircles = useCallback(
+    points => {
+      let tempCircles = [];
+      points.forEach((point, index) => {
+        const circle = new fabric.Circle({
+          radius: 5,
+          fill: 'rgba(0, 255, 0, 0.8)',
+          left: point.x,
+          top: point.y,
+          originX: 'center',
+          originY: 'center',
+          hasBorders: false,
+          hasControls: false,
+          name: index
+        });
+        tempCircles = tempCircles.concat(circle);
+        canvas.add(circle);
+      });
+      window.console.log('tempCircles', tempCircles);
+      setCircles(tempCircles);
+    },
+    // eslint-disable-next-line
+    [canvas]
+  );
+
+  const getActivePolygonPoints = useCallback(() => {
+    const activePolygon = canvas.getActiveObject();
+
+    const matrix = activePolygon.calcTransformMatrix();
+    const points = activePolygon
+      .get('points')
+      .map(p => {
+        return new fabric.Point(
+          p.x - activePolygon.pathOffset.x,
+          p.y - activePolygon.pathOffset.y
+        );
+      })
+      .map(p => {
+        return fabric.util.transformPoint(p, matrix);
+      });
+
+    return points;
+    // eslint-disable-next-line
+  }, [canvas]);
 
   const getTopPosition = useCallback(
     points => {
@@ -245,14 +412,18 @@ const Polygon = () => {
       canvas.off('mouse:up');
       canvas.off('mouse:move');
       canvas.off('mouse:dblclick');
+      canvas.off('object:moved');
+      canvas.off('object:moving');
 
       canvas.on('mouse:up', handleMouseUp);
       canvas.on('mouse:move', handleMouseMove);
       canvas.on('mouse:dblclick', handleMouseDoubleClick);
+      canvas.on('object:moving', handleObjectMoving);
+      canvas.on('object:moved', handleObjectMoved);
     }
 
     // eslint-disable-next-line
-  }, [canvas, drawingObject, polygonPoints, lines, lineCount]);
+  }, [canvas, drawingObject, polygonPoints, lines, circles, lineCount]);
 
   useEffect(() => {
     if (canvas) {
@@ -261,6 +432,7 @@ const Polygon = () => {
       const fabricCanvas = new fabric.Canvas(canvasEl.current, {
         // selection: false
       });
+
       fabricCanvas
         .setWidth(500)
         .setHeight(500)
@@ -287,6 +459,12 @@ const Polygon = () => {
           disabled={drawingObject.type !== ''}
         >
           Edit Polygon
+        </button>
+        <button
+          onClick={handleClearButtonClick}
+          disabled={drawingObject.type !== ''}
+        >
+          clear
         </button>
 
         <canvas
