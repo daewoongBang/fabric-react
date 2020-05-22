@@ -6,7 +6,7 @@ const Polygon = () => {
   const [canvas, setCanvas] = useState();
   const [lines, setLines] = useState([]);
   const [circles, setCircles] = useState([]);
-  const [editPolygon, setEditPolygon] = useState(null);
+
   const [lineCount, setLineCount] = useState(0);
   const [polygonPoints, setpolygonPoints] = useState([]);
   const [drawingObject, setDrawingObject] = useState({
@@ -24,30 +24,17 @@ const Polygon = () => {
   };
 
   const handleEditPolygonButtonClick = useCallback(() => {
-    const activePolygon = canvas.getActiveObject();
-    window.console.log('Edit', activePolygon);
-    // const indexPolygon = canvas.getObjects().indexOf(activePolygon);
-
-    if (editPolygon) {
-      editPolygon.cornerStyle = 'rect';
-      editPolygon.controls = fabric.Object.prototype.controls;
-      circles.forEach(value => {
-        canvas.remove(value);
-      });
-      editPolygon.hasBorders = !editPolygon.edit;
-    }
+    const activePolygon = canvas.getObjects()[0];
 
     if (activePolygon) {
-      canvas.setActiveObject(activePolygon);
+      // canvas.setActiveObject(activePolygon);
       activePolygon.edit = !activePolygon.edit;
 
       if (activePolygon.edit) {
-        const lastControl = activePolygon.points.length - 1;
         activePolygon.cornerStyle = 'circle';
         activePolygon.hasControls = false;
-        // 3.6.3 version
+
         makeCircles(activePolygon.points);
-        setEditPolygon(activePolygon);
       } else {
         activePolygon.cornerStyle = 'rect';
         activePolygon.controls = fabric.Object.prototype.controls;
@@ -56,16 +43,15 @@ const Polygon = () => {
           canvas.remove(value);
         });
         setCircles([]);
-        setEditPolygon(null);
       }
-      activePolygon.hasBorders = !activePolygon.edit;
+      //   activePolygon.hasBorders = !activePolygon.edit;
       canvas.requestRenderAll();
 
       window.console.log(activePolygon);
     }
 
     // eslint-disable-next-line
-  }, [canvas, circles, editPolygon]);
+  }, [canvas, circles]);
 
   const handleClearButtonClick = useCallback(() => {
     canvas.clear();
@@ -74,6 +60,7 @@ const Polygon = () => {
   const handleMouseUp = useCallback(
     options => {
       if (drawingObject.type === 'polygon') {
+        window.console.log('handleMouseUp!!!!!!!!!');
         const x = options.pointer.x;
         const y = options.pointer.y;
 
@@ -95,6 +82,17 @@ const Polygon = () => {
         setLineCount(lineCount + 1);
         canvas.add(line);
       }
+
+      const activePolygon = canvas.getActiveObject();
+      if (
+        activePolygon &&
+        activePolygon.get('type') === 'polygon' &&
+        activePolygon.edit
+      ) {
+        const points = getPolygonPoints();
+        makeCircles(points);
+        canvas.requestRenderAll();
+      }
     },
     // eslint-disable-next-line
     [canvas, drawingObject, polygonPoints, lines, lineCount]
@@ -103,6 +101,7 @@ const Polygon = () => {
   const handleMouseDown = useCallback(
     options => {
       const activePolygon = canvas.getActiveObject();
+
       if (
         activePolygon &&
         activePolygon.get('type') === 'polygon' &&
@@ -132,48 +131,35 @@ const Polygon = () => {
 
   const handleObjectMoved = useCallback(
     options => {
-      const activePolygon = canvas.getActiveObject();
-      if (activePolygon && activePolygon.get('type') === 'polygon') {
-        const points = getPolygonPoints();
-        activePolygon.initialize(points);
-        if (activePolygon.edit) {
-          makeCircles(points);
-          canvas.requestRenderAll();
-        }
-      }
+      //   const activePolygon = canvas.getActiveObject();
+      //   if (activePolygon && activePolygon.get('type') === 'polygon') {
+      //     const points = getPolygonPoints();
+      //     activePolygon.initialize(points);
+      //   }
     },
     // eslint-disable-next-line
-    [canvas, circles]
+    [canvas]
   );
 
   const handleObjectMoving = useCallback(
     options => {
       // polygon 이동과 circle 이동 구분
+      const activePolygon = canvas.getActiveObject();
+
+      //   window.console.log('activePolygon', activePolygon.get('type'));
+      //   window.console.log('options', options.target.get('type'));
       if (options.target.get('type') === 'circle') {
-        const p = options.target;
-        window.console.log(options);
-        window.console.log(
-          'p: ' + p.getCenterPoint().x + ',' + p.getCenterPoint().y
-        );
+        const polygon = canvas.getObjects()[0];
+        const circle = options.target;
+
+        polygon.points[circle.name] = {
+          x: circle.getCenterPoint().x,
+          y: circle.getCenterPoint().y
+        };
       }
-      //   if (editPolygon) {
-      //     const objectType = options.target.get('type');
-      //     const p = options.target;
-
-      //     if (objectType === 'circle') {
-      //       window.console.log('objectType', objectType);
-      //       window.console.log('p', p);
-
-      //       editPolygon.points[p.name] = {
-      //         x: p.getCenterPoint().x,
-      //         y: p.getCenterPoint().y
-      //       };
-      //       editPolygon.initialize(editPolygon.points);
-      //     }
-      //   }
     },
     // eslint-disable-next-line
-    [canvas, editPolygon]
+    [canvas]
   );
 
   const handleMouseDoubleClick = useCallback(() => {
@@ -211,9 +197,13 @@ const Polygon = () => {
         fill: 'rgba(0, 255, 0, 0.1)',
         // stroke: 'rgba(0, 255, 0, 0.5)',
         // strokeWidth: 2,
-        // hasBorders: false,
-        hasControls: false
-        // evented: false
+        hasBorders: false,
+        hasControls: false,
+        objectCaching: false,
+        selection: false,
+        // selectable: false
+        // evented: false,
+        index: 0
       });
 
       return polygon;
@@ -235,7 +225,10 @@ const Polygon = () => {
           originY: 'center',
           hasBorders: false,
           hasControls: false,
-          name: index
+          selection: false,
+          name: index,
+          index: index,
+          hoverCursor: 'pointer'
         });
         tempCircles = tempCircles.concat(circle);
         canvas.add(circle);
@@ -247,7 +240,7 @@ const Polygon = () => {
   );
 
   const getPolygonPoints = useCallback(() => {
-    const activePolygon = canvas.getActiveObject();
+    const activePolygon = canvas.getObjects()[0];
 
     const matrix = activePolygon.calcTransformMatrix();
     const points = activePolygon
@@ -311,6 +304,31 @@ const Polygon = () => {
   //     );
   //   };
 
+  const handleMouseOver = useCallback(
+    options => {
+      options.target &&
+        window.console.log('target', options.target.get('type'));
+    },
+    // eslint-disable-next-line
+    [canvas]
+  );
+
+  const handleObjectModified = useCallback(
+    options => {
+      const activePolygon = canvas.getObjects()[0];
+      if (activePolygon) {
+        // const { bl, br, tl, tr } = activePolygon.calcCoords();
+        // activePolygon.set({ aCoords: { bl, br, tl, tr } });
+        window.console.log('calcCoords', activePolygon.calcCoords());
+        const points = getPolygonPoints();
+        window.console.log('activePolygon', activePolygon);
+        activePolygon.initialize(points);
+      }
+    },
+    // eslint-disable-next-line
+    [canvas]
+  );
+
   useEffect(() => {
     if (canvas) {
       canvas.off('mouse:up');
@@ -319,6 +337,8 @@ const Polygon = () => {
       canvas.off('mouse:dblclick');
       canvas.off('object:moved');
       canvas.off('object:moving');
+      canvas.off('object:modified');
+      canvas.off('mouse:over');
 
       canvas.on('mouse:up', handleMouseUp);
       canvas.on('mouse:down', handleMouseDown);
@@ -326,6 +346,8 @@ const Polygon = () => {
       canvas.on('mouse:dblclick', handleMouseDoubleClick);
       canvas.on('object:moving', handleObjectMoving);
       canvas.on('object:moved', handleObjectMoved);
+      canvas.on('object:modified', handleObjectModified);
+      canvas.on('mouse:over', handleMouseOver);
     }
 
     // eslint-disable-next-line
@@ -336,7 +358,7 @@ const Polygon = () => {
       setCanvas(canvas);
     } else {
       const fabricCanvas = new fabric.Canvas(canvasEl.current, {
-        // selection: false
+        selection: false
       });
 
       fabricCanvas
