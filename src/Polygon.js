@@ -24,7 +24,7 @@ const Polygon = () => {
   };
 
   const handleEditPolygonButtonClick = useCallback(() => {
-    const activePolygon = canvas.getObjects()[0];
+    const activePolygon = findPolygon();
 
     if (activePolygon) {
       // canvas.setActiveObject(activePolygon);
@@ -46,8 +46,6 @@ const Polygon = () => {
       }
       //   activePolygon.hasBorders = !activePolygon.edit;
       canvas.requestRenderAll();
-
-      window.console.log(activePolygon);
     }
 
     // eslint-disable-next-line
@@ -81,17 +79,6 @@ const Polygon = () => {
         setLines(lines.concat(line));
         setLineCount(lineCount + 1);
         canvas.add(line);
-      }
-
-      const activePolygon = canvas.getActiveObject();
-      if (
-        activePolygon &&
-        activePolygon.get('type') === 'polygon' &&
-        activePolygon.edit
-      ) {
-        const points = getPolygonPoints();
-        makeCircles(points);
-        canvas.requestRenderAll();
       }
     },
     // eslint-disable-next-line
@@ -131,11 +118,7 @@ const Polygon = () => {
 
   const handleObjectMoved = useCallback(
     options => {
-      //   const activePolygon = canvas.getActiveObject();
-      //   if (activePolygon && activePolygon.get('type') === 'polygon') {
-      //     const points = getPolygonPoints();
-      //     activePolygon.initialize(points);
-      //   }
+      window.console.log('handleObjectMoved');
     },
     // eslint-disable-next-line
     [canvas]
@@ -144,12 +127,14 @@ const Polygon = () => {
   const handleObjectMoving = useCallback(
     options => {
       // polygon 이동과 circle 이동 구분
-      const activePolygon = canvas.getActiveObject();
+      // const activePolygon = canvas.getActiveObject();
+      // const activePolygon = findPolygon();
 
       //   window.console.log('activePolygon', activePolygon.get('type'));
       //   window.console.log('options', options.target.get('type'));
       if (options.target.get('type') === 'circle') {
-        const polygon = canvas.getObjects()[0];
+        // const polygon = canvas.getObjects()[0];
+        const polygon = findPolygon();
         const circle = options.target;
 
         polygon.points[circle.name] = {
@@ -188,6 +173,51 @@ const Polygon = () => {
 
     // eslint-disable-next-line
   }, [canvas, drawingObject, lines, polygonPoints]);
+
+  const handleMouseOver = useCallback(
+    options => {
+      options.target &&
+        window.console.log('target', options.target.get('type'));
+    },
+    // eslint-disable-next-line
+    [canvas]
+  );
+
+  const handleObjectModified = useCallback(
+    options => {
+      const activePolygon = findPolygon();
+      // const activePolygon2 = canvas.getObjects()[0].toObject();
+      const objects = canvas.getObjects();
+
+      if (activePolygon) {
+        window.console.log('activePolygon', activePolygon);
+        window.console.log('objects', objects);
+
+        const points = getPolygonPoints();
+        activePolygon.initialize(points);
+
+        const newPolygon = makePolygon(points);
+        newPolygon.left = activePolygon.left;
+        newPolygon.top = activePolygon.top;
+        newPolygon.edit = activePolygon.edit;
+
+        canvas.forEachObject(object => {
+          canvas.remove(object);
+        });
+
+        canvas.add(newPolygon);
+
+        if (newPolygon.edit) {
+          const points = getPolygonPoints();
+          makeCircles(points);
+        }
+
+        canvas.renderAll();
+      }
+    },
+    // eslint-disable-next-line
+    [canvas]
+  );
 
   const makePolygon = useCallback(
     points => {
@@ -239,16 +269,30 @@ const Polygon = () => {
     [canvas]
   );
 
-  const getPolygonPoints = useCallback(() => {
-    const activePolygon = canvas.getObjects()[0];
+  const findPolygon = useCallback(() => {
+    let polygon = null;
 
-    const matrix = activePolygon.calcTransformMatrix();
-    const points = activePolygon
+    canvas.forEachObject(object => {
+      if (object.get('type') === 'polygon') {
+        polygon = object;
+      }
+    });
+
+    return polygon;
+
+    // eslint-disable-next-line
+  }, [canvas, circles]);
+
+  const getPolygonPoints = useCallback(() => {
+    const polygon = findPolygon();
+
+    const matrix = polygon.calcTransformMatrix();
+    const points = polygon
       .get('points')
       .map(p => {
         return new fabric.Point(
-          p.x - activePolygon.pathOffset.x,
-          p.y - activePolygon.pathOffset.y
+          p.x - polygon.pathOffset.x,
+          p.y - polygon.pathOffset.y
         );
       })
       .map(p => {
@@ -284,49 +328,6 @@ const Polygon = () => {
       return Math.abs(result);
     },
     [canvas, lineCount]
-  );
-
-  //   const getRandomRGB = opacity => {
-  //     const o = Math.round,
-  //       r = Math.random,
-  //       s = 255;
-
-  //     return (
-  //       'rgba(' +
-  //       o(r() * s) +
-  //       ',' +
-  //       o(r() * s) +
-  //       ',' +
-  //       o(r() * s) +
-  //       ',' +
-  //       opacity +
-  //       ')'
-  //     );
-  //   };
-
-  const handleMouseOver = useCallback(
-    options => {
-      options.target &&
-        window.console.log('target', options.target.get('type'));
-    },
-    // eslint-disable-next-line
-    [canvas]
-  );
-
-  const handleObjectModified = useCallback(
-    options => {
-      const activePolygon = canvas.getObjects()[0];
-      if (activePolygon) {
-        // const { bl, br, tl, tr } = activePolygon.calcCoords();
-        // activePolygon.set({ aCoords: { bl, br, tl, tr } });
-        window.console.log('calcCoords', activePolygon.calcCoords());
-        const points = getPolygonPoints();
-        window.console.log('activePolygon', activePolygon);
-        activePolygon.initialize(points);
-      }
-    },
-    // eslint-disable-next-line
-    [canvas]
   );
 
   useEffect(() => {
