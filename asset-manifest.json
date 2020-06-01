@@ -1,0 +1,19 @@
+{
+  "files": {
+    "main.js": "/fabric-react/static/js/main.d6b835ea.chunk.js",
+    "main.js.map": "/fabric-react/static/js/main.d6b835ea.chunk.js.map",
+    "runtime-main.js": "/fabric-react/static/js/runtime-main.085ca109.js",
+    "runtime-main.js.map": "/fabric-react/static/js/runtime-main.085ca109.js.map",
+    "static/js/2.91025ef4.chunk.js": "/fabric-react/static/js/2.91025ef4.chunk.js",
+    "static/js/2.91025ef4.chunk.js.map": "/fabric-react/static/js/2.91025ef4.chunk.js.map",
+    "index.html": "/fabric-react/index.html",
+    "precache-manifest.1928e20520d4a46f09c5d8c98083bcd5.js": "/fabric-react/precache-manifest.1928e20520d4a46f09c5d8c98083bcd5.js",
+    "service-worker.js": "/fabric-react/service-worker.js",
+    "static/js/2.91025ef4.chunk.js.LICENSE.txt": "/fabric-react/static/js/2.91025ef4.chunk.js.LICENSE.txt"
+  },
+  "entrypoints": [
+    "static/js/runtime-main.085ca109.js",
+    "static/js/2.91025ef4.chunk.js",
+    "static/js/main.d6b835ea.chunk.js"
+  ]
+}
