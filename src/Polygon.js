@@ -5,10 +5,10 @@ const Polygon = () => {
   const canvasEl = useRef();
   const [canvas, setCanvas] = useState();
   const [lines, setLines] = useState([]);
-  const [circles, setCircles] = useState([]);
-
   const [lineCount, setLineCount] = useState(0);
+  const [circles, setCircles] = useState([]);
   const [polygonPoints, setpolygonPoints] = useState([]);
+  const [isEdit, setEdit] = useState(false);
   const [drawingObject, setDrawingObject] = useState({
     type: '',
     background: '',
@@ -16,6 +16,9 @@ const Polygon = () => {
   });
 
   const handleDrawPolygonButtonClick = () => {
+    canvas.forEachObject(object => {
+      canvas.remove(object);
+    });
     if (drawingObject.type === 'polygon') {
       setDrawingObject({ ...drawingObject, type: '' });
     } else {
@@ -27,8 +30,8 @@ const Polygon = () => {
     const activePolygon = findPolygon();
 
     if (activePolygon) {
-      // canvas.setActiveObject(activePolygon);
       activePolygon.edit = !activePolygon.edit;
+      setEdit(activePolygon.edit);
 
       if (activePolygon.edit) {
         activePolygon.cornerStyle = 'circle';
@@ -44,7 +47,7 @@ const Polygon = () => {
         });
         setCircles([]);
       }
-      //   activePolygon.hasBorders = !activePolygon.edit;
+
       canvas.requestRenderAll();
     }
 
@@ -52,13 +55,13 @@ const Polygon = () => {
   }, [canvas, circles]);
 
   const handleClearButtonClick = useCallback(() => {
+    setEdit(false);
     canvas.clear();
   }, [canvas]);
 
   const handleMouseUp = useCallback(
     options => {
       if (drawingObject.type === 'polygon') {
-        window.console.log('handleMouseUp!!!!!!!!!');
         const x = options.pointer.x;
         const y = options.pointer.y;
 
@@ -116,24 +119,9 @@ const Polygon = () => {
     [canvas, drawingObject, lines, lineCount]
   );
 
-  const handleObjectMoved = useCallback(
-    options => {
-      window.console.log('handleObjectMoved');
-    },
-    // eslint-disable-next-line
-    [canvas]
-  );
-
   const handleObjectMoving = useCallback(
     options => {
-      // polygon 이동과 circle 이동 구분
-      // const activePolygon = canvas.getActiveObject();
-      // const activePolygon = findPolygon();
-
-      //   window.console.log('activePolygon', activePolygon.get('type'));
-      //   window.console.log('options', options.target.get('type'));
       if (options.target.get('type') === 'circle') {
-        // const polygon = canvas.getObjects()[0];
         const polygon = findPolygon();
         const circle = options.target;
 
@@ -166,11 +154,6 @@ const Polygon = () => {
       setLineCount(0);
     }
 
-    const activePolygon = canvas.getActiveObject();
-    if (activePolygon) {
-      window.console.log('dbclick', activePolygon);
-    }
-
     // eslint-disable-next-line
   }, [canvas, drawingObject, lines, polygonPoints]);
 
@@ -186,13 +169,8 @@ const Polygon = () => {
   const handleObjectModified = useCallback(
     options => {
       const activePolygon = findPolygon();
-      // const activePolygon2 = canvas.getObjects()[0].toObject();
-      const objects = canvas.getObjects();
 
       if (activePolygon) {
-        window.console.log('activePolygon', activePolygon);
-        window.console.log('objects', objects);
-
         const points = getPolygonPoints();
         activePolygon.initialize(points);
 
@@ -225,14 +203,10 @@ const Polygon = () => {
         left: getLeftPosition(polygonPoints),
         top: getTopPosition(polygonPoints),
         fill: 'rgba(0, 255, 0, 0.1)',
-        // stroke: 'rgba(0, 255, 0, 0.5)',
-        // strokeWidth: 2,
         hasBorders: false,
         hasControls: false,
         objectCaching: false,
         selection: false,
-        // selectable: false
-        // evented: false,
         index: 0
       });
 
@@ -336,7 +310,6 @@ const Polygon = () => {
       canvas.off('mouse:down');
       canvas.off('mouse:move');
       canvas.off('mouse:dblclick');
-      canvas.off('object:moved');
       canvas.off('object:moving');
       canvas.off('object:modified');
       canvas.off('mouse:over');
@@ -346,7 +319,6 @@ const Polygon = () => {
       canvas.on('mouse:move', handleMouseMove);
       canvas.on('mouse:dblclick', handleMouseDoubleClick);
       canvas.on('object:moving', handleObjectMoving);
-      canvas.on('object:moved', handleObjectMoved);
       canvas.on('object:modified', handleObjectModified);
       canvas.on('mouse:over', handleMouseOver);
     }
@@ -379,7 +351,7 @@ const Polygon = () => {
       <div>
         <button
           onClick={handleDrawPolygonButtonClick}
-          disabled={drawingObject.type !== ''}
+          disabled={drawingObject.type !== '' || isEdit}
         >
           Draw Polygon
         </button>
@@ -409,6 +381,7 @@ const Polygon = () => {
         }}
       >
         <p>drawingObject type : {drawingObject.type}</p>
+        <p>isEdit : {isEdit.toString()}</p>
       </div>
     </div>
   );
